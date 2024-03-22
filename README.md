@@ -32,8 +32,27 @@ For inquiries about the code, please contact:
 
 ```bash
 git clone https://github.com/DecodEPFL/Distributed_neurSLS.git
+```
 
-### Navigate to the cloned directory:
+2. Navigate to the cloned directory:
+
+```bash
+cd Distributed_neurSLS
+```
+3. Install the required dependencies. We recommend using a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # Activate the virtual environment (Linux/macOS)
+pip install -r requirements.txt
+```
+
+### Usage
+1. Adjust parameters in utils.py as needed.
+2. Run the main script to start training:
+```bash
+python main.py
+```
+## Example
 
 ## License
 This work is licensed under a
