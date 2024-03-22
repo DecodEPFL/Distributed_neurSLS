@@ -7,7 +7,7 @@ from loss_functions import f_loss_obst
 
 
 def plot_trajectories(x, xbar, n_agents, text="", save=False, filename=None, T=100, obst=False, dots=False,
-                      circles=False, axis=False, min_dist=1, f=5,
+                      circles=False, axis=False, min_dist=1, f=5, notshow=False,
                       device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
     x = x.cpu()
     xbar = xbar.cpu()
@@ -56,8 +56,11 @@ def plot_trajectories(x, xbar, n_agents, text="", save=False, filename=None, T=1
     # TODO: add legend ( solid line: t<T/3 , dotted line> t>T/3, etc )
     if save:
         plt.savefig('figures/' + filename + '_' + text + '_trajectories.eps', format='eps')
+    elif notshow:
+        nada = 1
     else:
         plt.show()
+
     return fig
 def plot_traj_vs_time(t_end, n_agents, x, u=None, text="", save=False, filename=None):
     x = x.cpu()

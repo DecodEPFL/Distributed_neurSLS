@@ -120,7 +120,7 @@ class Input(torch.nn.Module):
         self.t_end = t_end
         self.m = m
         if active:
-            std = 1
+            std = 0
             self.u = torch.nn.Parameter(torch.randn(t_end, m, requires_grad=True,device=device) * std)
         else:
             self.u = torch.zeros(t_end, m,device=device)
@@ -188,27 +188,33 @@ class SystemsOfSprings(torch.nn.Module):
         self.n = 16
         self.m = 8
         self.h = Ts
+        self.maxlength5 = 4
+        self.maxlength6 = 1.5
+        self.maxlength7 = 4
+        self.maxlength8 = 1.5
+        self.maxlength9 = torch.sqrt(torch.tensor(self.maxlength7 ** 2 + self.maxlength8 ** 2, device=device))
+        self.maxlength10 = torch.sqrt(torch.tensor(self.maxlength7 ** 2 + self.maxlength8 ** 2, device=device))
 
 
     def f(self, t, x,u, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
 
         m1, m2, m3, m4 = 1,1,1,1
         kspringGround = 1
-        cdampGround = 2
+        cdampGround = 1
         kspringInter = 1
         cdampInter = 0
 
         k1,k2,k3,k4 = kspringGround,kspringGround,kspringGround,kspringGround
-        k5,k6,k7,k8,k9,k10 = kspringInter,kspringInter,kspringInter,kspringInter,kspringInter,kspringInter
+        k5,k6,k7,k8,k9,k10 = kspringInter,kspringInter,kspringInter,kspringInter,0,0
         c1,c2,c3,c4 = cdampGround,cdampGround,cdampGround,cdampGround
         c5,c6,c7,c8,c9,c10 = cdampInter,cdampInter,cdampInter,cdampInter,cdampInter,cdampInter
 
-        maxlength5 = 4
-        maxlength6 = 1.5
-        maxlength7 = 4
-        maxlength8 = 1.5
-        maxlength9 = torch.sqrt(torch.tensor(maxlength7 ** 2 + maxlength8 ** 2, device=device))
-        maxlength10 = torch.sqrt(torch.tensor(maxlength7 ** 2 + maxlength8 ** 2, device=device))
+        maxlength5 = self.maxlength5
+        maxlength6 = self.maxlength6
+        maxlength7 = self.maxlength7
+        maxlength8 = self.maxlength8
+        maxlength9 = self.maxlength9
+        maxlength10 = self.maxlength10
 
         Mx = torch.zeros(self.n_agents,self.n,device=device)
         Mx[0,0] = 1
@@ -401,7 +407,7 @@ class Controller(nn.Module):
         self.noise_r = Noise_reconstruction(f)
         self.netREN = NetworkedRENs(N, Muy, Mud, n, m, n_xi, l)
         std = 1
-        self.amplifier = torch.nn.Parameter(torch.randn(1, requires_grad=True, device=device) * std)
+        self.amplifier = torch.nn.Parameter(torch.ones(1, requires_grad=True, device=device) * std)
         if use_sp:  # setpoint that enters additively in the reconstruction of omega
             self.sp = Input(torch.tensor(16,device = device), t_end_sp, active=use_sp)
 

@@ -10,13 +10,17 @@ import scipy
 
 from models import Controller, SystemsOfSprings
 from plots import plot_trajectories, plot_traj_vs_time, plot_losses
-from loss_functions import f_loss_states, f_loss_u, f_loss_ca, f_loss_obst, f_loss_side
+from loss_functions import f_loss_states, f_loss_u, f_loss_ca, f_loss_obst, f_loss_side, f_loss_formation
 from utils import calculate_collisions, set_params
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.manual_seed(1234)
 np.random.seed(1234)
+
+mp = torch.eye(2,2,device=device)
+mv = torch.zeros(2, 2, device=device)
+maskp = torch.block_diag(mp, mv, mp, mv, mp, mv, mp, mv)
 
 ny = 2  # output dimension of single ren = input dimension of single ren from other ren
 nx = 4  # number of states single agent = dimension of single exogenous input
@@ -70,7 +74,13 @@ if print_simulation:
         x = sys(t, x, u, w_in[t, :])
         x_log[t, :] = x.detach()
         u_log[t, :] = u.detach()
-    plot_trajectories(x_log, xbar, sys.n_agents, text="CL - before training", T=t_end, obst=alpha_obst)
+
+    xbar2 = torch.tensor([0.75, 2, 0, 0,
+                             0.75, -2, 0, 0,
+                             -0.75, -2, 0, 0,
+                             -0.75, 2, 0, 0,
+                             ],device = device)
+    plot_trajectories(x_log, xbar2, sys.n_agents, text="CL - before training", T=t_end, obst=alpha_obst)
 
 # # # # # # # # Training # # # # # # # #
 print("------------ Begin training ------------")
@@ -78,7 +88,6 @@ print("Problem: " + sys_model + " -- t_end: %i" % t_end + " -- lr: %.2e" % learn
       " -- epochs: %i" % epochs + " -- n_traj: %i" % n_traj + " -- std_ini: %.2f" % std_ini)
 print(" -- alpha_u: %.1f" % alpha_u + " -- alpha_ca: %i" % alpha_ca + " -- alpha_obst: %.1e" % alpha_obst)
 print("--------- --------- ---------  ---------")
-
 
 
 lossl = np.zeros(epochs)
@@ -91,12 +100,13 @@ xi = torch.zeros((sum(n_xi)),device=device)
 for epoch in range(epochs):
     gamma = []
     optimizer.zero_grad()
-    loss_x, loss_u, loss_ca, loss_obst, loss_side = 0, 0, 0, 0, 0
-    #if epoch > 100:
-    #    optimizer.param_groups[0]['lr'] = 1e-2
+    loss_x, loss_u, loss_ca, loss_obst, loss_side, loss_form = 0, 0, 0, 0, 0,0
+    if epoch > 500:
+        optimizer.param_groups[0]['lr'] = 1e-3
     for kk in range(n_traj):
         x.detach()
-        x = x0 + std_ini * torch.randn(x0.shape, device=device)
+        randIn = std_ini * torch.randn(x0.shape, device=device)
+        x = x0 + torch.matmul(maskp,randIn)
         u = torch.zeros(sys.m,device=device)
         omega = (x, u)
         us = torch.zeros(sys.m,device=device)
@@ -112,12 +122,13 @@ for epoch in range(epochs):
             loss_u = loss_u + alpha_u * f_loss_u(t, us)
             loss_ca = loss_ca + alpha_ca * f_loss_ca(x, sys, min_dist)
             loss_side = loss_side + alpha_obst * f_loss_side(x)
+            loss_form = loss_form + 5e2*f_loss_formation(x,sys)
             if alpha_obst != 0:
                 loss_obst = loss_obst + alpha_obst * f_loss_obst(x)
-    loss = loss_x + loss_ca + loss_obst + loss_side + loss_u
+    loss = loss_x + loss_ca + loss_obst + loss_side + loss_u + loss_form
     print("Epoch: %i --- Loss: %.4f ---||--- Loss x: %.2f --- " % (epoch, loss / t_end, loss_x) +
           "Loss u: %.2f --- Loss ca: %.2f --- Loss obst: %.2f" % (loss_u, loss_ca, loss_obst) +
-          "Loss side: %.2f " % loss_side)
+          "Loss side: %.2f --- Loss form: %.2f" % (loss_side,loss_form))
     #print("Max ref: %.4f --- " % (torch.norm(ctl.sp.u[:, 1])))
     print("Amplifier: %.4f --- " % (ctl.amplifier))
     loss.backward()
@@ -130,6 +141,8 @@ for epoch in range(epochs):
 
 # # # # # # # # Save trained model # # # # # # # #
 torch.save(ctl.netREN.state_dict(), "trained_models/" + sys_model + "_tmp.pt")
+torch.save(ctl.sp.state_dict(), "trained_models/" + sys_model + "_sp.pt")
+torch.save(ctl.state_dict(), "trained_models/" + sys_model + "_amp.pt")
 # # # # # # # # Print & plot results # # # # # # # #
 
 # SIMULATION AND PLOTS
