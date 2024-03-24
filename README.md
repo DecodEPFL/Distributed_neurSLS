@@ -59,8 +59,8 @@ python main.py
 The following gifs show trajectories of the vehicles before and after the training of a distributed neurSLS controller, where the agents that need to coordinate in order to pass through a narrow passage while trying to keep a rectangular shape, starting from a random initial position marked with &#9675;.
 
 <p align="center">
-<img src="./figures/corridorOL.gif" alt="robot_trajectories_before_training" width="400"/>
-<img src="./figures/corridor.gif" alt="robot_trajectories_after_training_a_neurSLS_controller" width="400"/>
+<img src="./figures/OL.gif" alt="robot_trajectories_before_training" width="400"/>
+<img src="./figures/CL.gif" alt="robot_trajectories_after_training_a_neurSLS_controller" width="400"/>
 </p> 
 
 ## License
